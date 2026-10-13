@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Electronics Inventory Tracker</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f9f9f9; color: #333; }
+        .box { background: white; padding: 20px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .flex-container { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+
+        input[type="text"], input[type="number"], select { padding: 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 4px; }
+        .search-input { width: 350px; }
+
+        .btn { padding: 10px 18px; font-size: 15px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-primary { background-color: #007BFF; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .btn-success { background-color: #28a745; }
+        .btn-success:hover { background-color: #218838; }
+        .btn-danger { background-color: #dc3545; color: white; padding: 5px 10px; font-size: 12px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-danger:hover { background-color: #bd2130; }
+        .clear-btn { margin-left: 15px; color: #dc3545; text-decoration: none; font-weight: bold; }
+
+        h2 { border-bottom: 2px solid #007BFF; padding-bottom: 8px; margin-top: 40px; color: #007BFF; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; vertical-align: middle; }
+        th { background-color: #f4f6f9; font-weight: bold; }
+        tr:hover { background-color: #f9f9f9; }
+
+        .inline-form { display: inline-flex; align-items: center; gap: 5px; margin: 0; }
+        .qty-input { width: 60px; padding: 6px; text-align: center; }
+        .empty-row { text-align: center; color: #888; padding: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>⚡ Electronics Inventory Central</h1>
+
+    <!-- ➕ ADD NEW ITEM SECTION -->
+    <div class="box">
+        <h3>➕ Add New Item to Stock</h3>
+        <form method="POST" action="?{{ request.GET.urlencode }}">
+            {% csrf_token %}
+            <input type="hidden" name="form_action" value="add_item">
+
+            <div class="flex-container">
+                <div class="form-group">
+                    <label>Item Category</label>
+                    <select name="add_item_type" id="itemTypeSelect" onchange="toggleFormFields()">
+                        <option value="part">📦 Electronic Part</option>
+                        <option value="tool">🛠️ Electronic Tool</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" name="name" placeholder="e.g. Resistor, Multimeter" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Initial Quantity</label>
+                    <input type="number" name="quantity" value="0" min="0" style="width: 80px;">
+                </div>
+
+                <!-- Fields dedicated to PARTS -->
+                <div class="flex-container" id="partFields">
+                    <div class="form-group">
+                        <label>Part Number</label>
+                        <input type="text" name="part_number" placeholder="e.g. NE555">
+                    </div>
+                    <div class="form-group">
+                        <label>Value / Rating</label>
+                        <input type="text" name="value" placeholder="e.g. 10k Ohm, 16V">
+                    </div>
+                    <div class="form-group">
+                        <label>Package Type</label>
+                        <input type="text" name="package_type" placeholder="e.g. SMD, TO-92">
+                    </div>
+                    <div class="form-group">
+                        <label>Storage Location</label>
+                        <input type="text" name="storage_location" placeholder="e.g. Bin B4">
+                    </div>
+                </div>
+
+                <!-- Fields dedicated to TOOLS -->
+                <div class="flex-container" id="toolFields" style="display: none;">
+                    <div class="form-group">
+                        <label>Brand</label>
+                        <input type="text" name="brand" placeholder="e.g. Fluke">
+                    </div>
+                    <div class="form-group">
+                        <label>Serial Number</label>
+                        <input type="text" name="serial_number" placeholder="e.g. SN-98721">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success">Save Entry</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 🔍 SEARCH BAR SECTION -->
+    <div class="box">
+        <form method="GET" action="">
+            <div class="flex-container">
+                <div class="form-group">
+                    <input type="text" name="q" class="search-input" placeholder="Search tools or parts..." value="{{ query|default:'' }}">
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">Search Inventory</button>
+                    {% if query %}
+                        <a href="{% url 'part_list' %}" class="clear-btn">Clear Filter</a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 🛠️ ELECTRONIC TOOLS TABLE -->
+    <h2>🛠️ Electronic Tools</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Tool Name</th>
+                <th>Brand</th>
+                <th>Serial Number</th>
+                <th style="width: 160px;">Quantity</th>
+                <th style="width: 90px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tool in tools %}
+            <tr>
+                <td><strong>{{ tool.name }}</strong></td>
+                <td>{{ tool.brand|default:"-" }}</td>
+                <td>{{ tool.serial_number|default:"-" }}</td>
+                <td>
+                    <form method="POST" class="inline-form" action="?{{ request.GET.urlencode }}">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_action" value="update_stock">
+                        <input type="hidden" name="item_type" value="tool">
+                        <input type="hidden" name="item_id" value="{{ tool.id }}">
+                        <input type="number" name="quantity" class="qty-input" value="{{ tool.quantity }}" min="0">
+                        <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size:12px;">Update</button>
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" class="inline-form" action="?{{ request.GET.urlencode }}" onsubmit="return confirm('Are you sure you want to delete this tool?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_action" value="delete_item">
+                        <input type="hidden" name="item_type" value="tool">
+                        <input type="hidden" name="item_id" value="{{ tool.id }}">
+                        <button type="submit" class="btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="empty-row">No tools found matching your criteria.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- 📦 ELECTRONIC PARTS TABLE -->
+    <h2>📦 Electronic Parts</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Part Name</th>
+                <th>Part Number</th>
+                <th>Value / Rating</th>
+                <th>Package Type</th>
+                <th>Storage Location</th>
+                <th style="width: 160px;">Quantity Available</th>
+                <th style="width: 90px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for part in parts %}
+            <tr>
+                <td><strong>{{ part.name }}</strong></td>
+                <td>{{ part.part_number|default:"-" }}</td>
+                <td>{{ part.value|default:"-" }}</td>
+                <td>{{ part.package_type|default:"-" }}</td>
+                <td>{{ part.storage_location|default:"-" }}</td>
+                <td>
+                    <form method="POST" class="inline-form" action="?{{ request.GET.urlencode }}">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_action" value="update_stock">
+                        <input type="hidden" name="item_type" value="part">
+                        <input type="hidden" name="item_id" value="{{ part.id }}">
+                        <input type="number" name="quantity" class="qty-input" value="{{ part.quantity }}" min="0">
+                        <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size:12px;">Update</button>
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" class="inline-form" action="?{{ request.GET.urlencode }}" onsubmit="return confirm('Are you sure you want to delete this component?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_action" value="delete_item">
+                        <input type="hidden" name="item_type" value="part">
+                        <input type="hidden" name="item_id" value="{{ part.id }}">
+                        <button type="submit" class="btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="empty-row">No tools found matching your criteria.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- JavaScript to toggle unique layout fields -->
+
+    <script>
+        function toggleFormFields() {
+            var selector = document.getElementById("itemTypeSelect").value;
+            var partFields = document.getElementById("partFields");
+            var toolFields = document.getElementById("toolFields");
+
+            if (selector === "part") {
+                partFields.style.display = "flex";
+                toolFields.style.display = "none";
+            } else {
+                partFields.style.display = "none";
+                toolFields.style.display = "flex";
+            }
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+
