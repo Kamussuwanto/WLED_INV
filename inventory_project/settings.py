@@ -25,7 +25,9 @@ SECRET_KEY = "django-insecure-%l1c2!o=l1o17y7uls3(&4g%1a30)f87d%16yz*^uhf4)k1xww
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['kamus4.pythonanywhere.com']
+# Allows local testing alongside traffic within your phone hotspot network profile
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.43.*']
+
 
 
 # Application definition

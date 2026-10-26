@@ -1,6 +1,62 @@
-from django.shortcuts import render, redirect
-from django.db.models import Q
+
+
+
+import requests
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib import messages
 from .models import ElectronicPart, ElectronicTool
+
+
+#from django.shortcuts import render, redirect
+from django.db.models import Q
+#from .models import ElectronicPart, ElectronicTool
+
+
+# inventory/views.py
+
+# Option A: Use the static IP directly (Recommended if mDNS has latency over your phone hotspot)
+MCU_ADDRESS = "http://192.168.43.244"
+
+# Option B: Use the mDNS alias domain name 
+# MCU_ADDRESS = "http://electronics-leds.local"
+
+# Using mDNS local hostname instead of a hardcoded IP address
+#MCU_ADDRESS = "http://electronics-leds.local"
+
+def locate_part(request, pk):
+    """Sends an HTTP request to the ESP32-S3 to light up a part's drawer."""
+    part = get_object_or_404(ElectronicPart, pk=pk)
+    return _send_led_signal(request, part.name, part.led_index)
+
+def locate_tool(request, pk):
+    """Sends an HTTP request to the ESP32-S3 to light up a tool's drawer."""
+    tool = get_object_or_404(ElectronicTool, pk=pk)
+    return _send_led_signal(request, tool.name, tool.led_index)
+
+def _send_led_signal(request, item_name, led_index):
+    """Helper function to execute the outbound API request to the hardware."""
+    try:
+        # Calls the ESP32-S3 route: http://electronics-leds.local
+        response = requests.get(f"{MCU_ADDRESS}/light", params={'led': led_index}, timeout=2.5)
+        
+        if response.status_code == 200:
+            messages.success(request, f"⚡ Flashing drawer LED {led_index} for: {item_name}!")
+        else:
+            messages.warning(request, f"MCU responded with status code {response.status_code}.")
+            
+    except requests.exceptions.RequestException:
+        messages.error(
+            request, 
+            f"❌ Hardware offline. Ensure your ESP32-S3 is powered and on your phone's hotspot."
+        )
+        
+    # Redirect back to the page the user came from
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+
+
+
 
 def inventory_search_view(request):
     # --- Handle POST requests (Adding, Updating stock, or Deleting items) ---
