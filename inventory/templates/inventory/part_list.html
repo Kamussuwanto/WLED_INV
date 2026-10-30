@@ -1,6 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    {% load static %}
+    <!-- PWA Manifest links -->
+    <link rel="manifest" href="{% static 'inventory/manifest.json' %}">
+    <meta name="theme-color" content="#2c3e50">
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+            navigator.serviceWorker.register("{% static 'inventory/serviceworker.js' %}")
+                .then(reg => console.log('Service Worker Registered!', reg))
+                .catch(err => console.log('Registration Failed:', err));
+            });
+        }
+    </script>
+
     <meta charset="UTF-8">
     <title>Electronics Inventory Tracker</title>
     <style>
