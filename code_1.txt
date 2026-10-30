@@ -1,0 +1,32 @@
+#include <FastLED.h>
+
+#define LED_PIN 48
+#define NUM_LEDS 1
+
+CRGB leds[NUM_LEDS];
+
+void setup() {
+  //https://www.youtube.com/yellowpurple
+  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS)
+         .setCorrection(TypicalLEDStrip);
+
+  FastLED.setBrightness(50);
+}
+
+void loop() {
+  leds[0] = CRGB::Red;
+  FastLED.show();
+  delay(1000);
+
+  leds[0] = CRGB::Green;
+  FastLED.show();
+  delay(1000);
+
+  leds[0] = CRGB::Blue;
+  FastLED.show();
+  delay(1000);
+
+  leds[0] = CRGB::Black;
+  FastLED.show();
+  delay(1000);
+}
